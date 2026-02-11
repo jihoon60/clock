@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Coke Magnetic Pixel Clock</title>
+    <style>
+        body { 
+            background-color: #000; 
+            margin: 0; 
+            overflow: hidden; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh;
+            touch-action: none;
+            cursor: none;
+        }
+        canvas { filter: drop-shadow(0 0 10px rgba(255, 0, 0, 0.7)); }
+        #fs-btn {
+            position: fixed; right: 20px; bottom: 20px;
+            width: 40px; height: 40px;
+            background: rgba(255, 0, 0, 0.2);
+            border: 1px solid #FF0000; border-radius: 5px;
+            cursor: pointer; z-index: 100;
+            display: flex; justify-content: center; align-items: center;
+            pointer-events: auto;
+        }
+        #fs-btn svg { fill: #FF0000; width: 24px; height: 24px; }
+    </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="fs-btn">
+    <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+</div>
+
+<script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const fsBtn = document.getElementById('fs-btn');
+    
+    let particles = [];
+    let bubbles = [];
+    let pW = 4, pH = 5, gap = 1.0;
+    const CELL_SIZE = 50;
+    let spatialGrid = {};
+    let mouseX = -100, mouseY = -100;
+
+    // 터치 기기 감지 (마우스가 없는 순수 터치 기기만)
+    const isTouchOnly = ('ontouchstart' in window) && 
+                        (navigator.maxTouchPoints > 0) && 
+                        !window.matchMedia("(pointer: fine)").matches;
+
+    fsBtn.addEventListener('click', () => {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+        else document.exitFullscreen();
+    });
+
+    function setPos(e) {
+        // 터치 전용 기기에서는 마우스 위치를 업데이트하지 않음
+        if (isTouchOnly) return;
+        
+        mouseX = e.touches ? e.touches[0].clientX : e.clientX;
+        mouseY = e.touches ? e.touches[0].clientY : e.clientY;
+    }
+    canvas.addEventListener('mousemove', setPos);
+    canvas.addEventListener('touchstart', setPos);
+    canvas.addEventListener('touchmove', (e) => { e.preventDefault(); setPos(e); }, { passive: false });
+
+    class Particle {
+        constructor(x, y) {
+            this.originX = x; this.originY = y;
+            this.x = x; this.y = y;
+            this.vx = 0; this.vy = 0;
+            this.friction = 0.85; this.spring = 0.08;
+        }
+        update(nearbyBubbles) {
+            nearbyBubbles.forEach(b => {
+                const dx = this.x - b.x, dy = this.y - b.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < b.size * 4 && dist > 0) {
+                    const force = (b.size * 4 - dist) / (b.size * 4);
+                    this.vx += (dx / dist) * force * force * 1.5;
+                    this.vy += (dy / dist) * force * force * 1.5;
+                }
+            });
+            this.vx += (this.originX - this.x) * this.spring;
+            this.vy += (this.originY - this.y) * this.spring;
+            this.vx *= this.friction; this.vy *= this.friction;
+            this.x += this.vx; this.y += this.vy;
+        }
+        draw() { ctx.fillStyle = "#FF0000"; ctx.fillRect(this.x, this.y, pW, pH); }
+    }
+
+    class Bubble {
+        constructor(isInitial = false) { this.reset(isInitial); }
+        reset(isInitial) {
+            this.x = Math.random() * window.innerWidth;
+            this.y = isInitial ? Math.random() * window.innerHeight : window.innerHeight + 50;
+            this.size = Math.random() * 8 + 4;
+            this.speed = 2.5; this.opacity = Math.random() * 0.25 + 0.15;
+            this.angle = Math.random() * Math.PI * 2;
+        }
+        update() {
+            this.y -= this.speed;
+            this.x += Math.sin(this.angle += 0.02) * 1.5;
+            if (this.y < -50) this.reset(false);
+        }
+        draw() {
+            ctx.fillStyle = `rgba(255, 0, 0, ${this.opacity})`;
+            ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+        }
+    }
+
+    function buildSpatialGrid() {
+        spatialGrid = {};
+        bubbles.forEach(b => {
+            const key = `${Math.floor(b.x / CELL_SIZE)},${Math.floor(b.y / CELL_SIZE)}`;
+            if (!spatialGrid[key]) spatialGrid[key] = [];
+            spatialGrid[key].push(b);
+        });
+    }
+
+    function getNearbyBubbles(x, y) {
+        const cX = Math.floor(x / CELL_SIZE), cY = Math.floor(y / CELL_SIZE);
+        const nearby = [];
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dy = -1; dy <= 1; dy++) {
+                const key = `${cX + dx},${cY + dy}`;
+                if (spatialGrid[key]) nearby.push(...spatialGrid[key]);
+            }
+        }
+        return nearby;
+    }
+
+    function init() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        bubbles = Array.from({ length: 60 }, () => new Bubble(true));
+        lastTime = "";
+    }
+
+    let lastTime = "";
+    function updateParticles() {
+        const time = new Date().toTimeString().split(' ')[0];
+        if (time === lastTime) return;
+        lastTime = time;
+
+        const mCanvas = document.createElement('canvas');
+        const mctx = mCanvas.getContext('2d');
+        
+        // 목표: 화면에 표시될 최종 크기를 먼저 결정
+        const isLandscape = window.innerWidth > window.innerHeight;
+        const targetDisplayWidth = isLandscape ? canvas.width * 0.7 : canvas.width * 0.85;
+        const targetDisplayHeight = isLandscape ? canvas.height * 0.5 : canvas.height * 0.25;
+        
+        // 입자 하나의 크기 (pW + gap)
+        const particleSize = pW + gap;
+        
+        // 필요한 입자 개수 (가로 방향 기준으로 계산)
+        const particlesWide = Math.floor(targetDisplayWidth / particleSize);
+        
+        // 텍스트를 렌더링할 캔버스 크기 = 입자 개수와 동일하게
+        const textWidth = particlesWide;
+        const textHeight = Math.floor(targetDisplayHeight / particleSize);
+        
+        mCanvas.width = textWidth;
+        mCanvas.height = textHeight;
+        
+        // 폰트 크기는 캔버스 너비에 맞춰 조정 (시간 텍스트 "00:00:00" 길이 고려)
+        const fontSize = textWidth / 6;
+        
+        mctx.font = `900 ${fontSize}px Arial Black`;
+        mctx.textAlign = "center";
+        mctx.textBaseline = "middle";
+        mctx.fillStyle = "white";
+        mctx.fillText(time, textWidth / 2, textHeight / 2);
+
+        const data = mctx.getImageData(0, 0, textWidth, textHeight).data;
+        
+        // 실제 화면에 표시될 크기 계산
+        const displayWidth = textWidth * particleSize;
+        const displayHeight = textHeight * particleSize;
+        const startX = (canvas.width - displayWidth) / 2;
+        const startY = (canvas.height - displayHeight) / 2;
+
+        const newParticles = [];
+        // sampling = 1 (픽셀 1개당 입자 1개)
+        for (let y = 0; y < textHeight; y++) {
+            for (let x = 0; x < textWidth; x++) {
+                if (data[(y * textWidth + x) * 4 + 3] > 128) {
+                    const px = startX + x * particleSize;
+                    const py = startY + y * particleSize;
+                    newParticles.push(new Particle(px, py));
+                }
+            }
+        }
+        particles = newParticles;
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        updateParticles();
+        buildSpatialGrid();
+        bubbles.forEach(b => { b.update(); b.draw(); });
+        particles.forEach(p => { 
+            p.update(getNearbyBubbles(p.x, p.y)); 
+            p.draw(); 
+        });
+        
+        // 터치 전용 기기가 아닐 때만 마우스 포인터 표시
+        if (!isTouchOnly) {
+            ctx.strokeStyle = "#FF0000"; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(mouseX, mouseY, 16, 0, Math.PI * 2); ctx.stroke();
+        }
+        requestAnimationFrame(animate);
+    }
+
+    init(); animate();
+    window.onresize = init;
+</script>
+</body>
+</html>
