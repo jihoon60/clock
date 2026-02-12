@@ -61,6 +61,11 @@
             pointer-events: auto;
         }
         #fs-btn svg { fill: #FF0000; width: 24px; height: 24px; }
+
+        /* 모바일/패드 기기에서 버튼 숨기기 (미디어 쿼리 활용) */
+        @media (pointer: coarse) {
+            #fs-btn { display: none !important; }
+        }
     </style>
 </head>
 <body>
@@ -83,7 +88,15 @@
     let spatialGrid = {};
     let mouseX = -100, mouseY = -100;
 
-    // 터치 기기 감지 (마우스가 없는 순수 터치 기기만)
+    // 터치 기기 및 모바일 유저 에이전트 감지
+    const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || 
+                           (navigator.maxTouchPoints > 0 && /Macintosh/i.test(navigator.userAgent)); // iPadOS 대응
+
+    // 모바일/패드라면 버튼을 DOM에서 제거
+    if (isMobileDevice) {
+        fsBtn.style.display = 'none';
+    }
+
     const isTouchOnly = ('ontouchstart' in window) && 
                         (navigator.maxTouchPoints > 0) && 
                         !window.matchMedia("(pointer: fine)").matches;
@@ -92,28 +105,18 @@
     
     fsBtn.addEventListener('click', () => {
         const elem = document.documentElement;
-        
-        // 모바일 감지
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         
         if (isMobile) {
-            // 모바일: 브라우저 UI 숨기기
             if (!isFullscreenMode) {
-                // 주소창 숨기기
                 window.scrollTo(0, 1);
                 document.body.style.overflow = 'hidden';
-                
-                // iOS 홈 화면에 추가 안내 (처음 클릭시에만)
-                if (/iPhone|iPad|iPod/i.test(navigator.userAgent) && !window.navigator.standalone) {
-                    console.log('iOS: 홈 화면에 추가하면 전체화면으로 사용 가능');
-                }
                 isFullscreenMode = true;
             } else {
                 document.body.style.overflow = 'auto';
                 isFullscreenMode = false;
             }
         } else {
-            // PC: 기존 전체화면 API 사용
             if (!document.fullscreenElement && !document.webkitFullscreenElement) {
                 if (elem.requestFullscreen) {
                     elem.requestFullscreen();
@@ -140,7 +143,6 @@
 
     function setPos(e) {
         if (isTouchOnly) return;
-        
         mouseX = e.touches ? e.touches[0].clientX : e.clientX;
         mouseY = e.touches ? e.touches[0].clientY : e.clientY;
     }
