@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>Coke Magnetic Pixel Clock</title>
     <style>
         body { 
@@ -52,30 +55,53 @@
                         (navigator.maxTouchPoints > 0) && 
                         !window.matchMedia("(pointer: fine)").matches;
 
+    let isFullscreenMode = false;
+    
     fsBtn.addEventListener('click', () => {
         const elem = document.documentElement;
         
-        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-            // 전체화면 진입
-            if (elem.requestFullscreen) {
-                elem.requestFullscreen();
-            } else if (elem.webkitRequestFullscreen) { // Safari
-                elem.webkitRequestFullscreen();
-            } else if (elem.mozRequestFullScreen) { // Firefox
-                elem.mozRequestFullScreen();
-            } else if (elem.msRequestFullscreen) { // IE/Edge
-                elem.msRequestFullscreen();
+        // 모바일 감지
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        
+        if (isMobile) {
+            // 모바일: 브라우저 UI 숨기기
+            if (!isFullscreenMode) {
+                // 주소창 숨기기
+                window.scrollTo(0, 1);
+                document.body.style.overflow = 'hidden';
+                
+                // iOS 홈 화면에 추가 안내 (처음 클릭시에만)
+                if (/iPhone|iPad|iPod/i.test(navigator.userAgent) && !window.navigator.standalone) {
+                    // iOS에서는 "홈 화면에 추가"를 해야 진짜 전체화면
+                    console.log('iOS: 홈 화면에 추가하면 전체화면으로 사용 가능');
+                }
+                isFullscreenMode = true;
+            } else {
+                document.body.style.overflow = 'auto';
+                isFullscreenMode = false;
             }
         } else {
-            // 전체화면 종료
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            } else if (document.webkitExitFullscreen) { // Safari
-                document.webkitExitFullscreen();
-            } else if (document.mozCancelFullScreen) { // Firefox
-                document.mozCancelFullScreen();
-            } else if (document.msExitFullscreen) { // IE/Edge
-                document.msExitFullscreen();
+            // PC: 기존 전체화면 API 사용
+            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                if (elem.requestFullscreen) {
+                    elem.requestFullscreen();
+                } else if (elem.webkitRequestFullscreen) {
+                    elem.webkitRequestFullscreen();
+                } else if (elem.mozRequestFullScreen) {
+                    elem.mozRequestFullScreen();
+                } else if (elem.msRequestFullscreen) {
+                    elem.msRequestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
             }
         }
     });
