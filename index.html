@@ -152,8 +152,8 @@
         
         // 목표: 화면에 표시될 최종 크기를 먼저 결정
         const isLandscape = window.innerWidth > window.innerHeight;
-        const targetDisplayWidth = isLandscape ? canvas.width * 0.7 : canvas.width * 0.85;
-        const targetDisplayHeight = isLandscape ? canvas.height * 0.5 : canvas.height * 0.25;
+        const targetDisplayWidth = isLandscape ? canvas.width * 0.8 : canvas.width * 0.95;
+        const targetDisplayHeight = isLandscape ? canvas.height * 0.6 : canvas.height * 0.35;
         
         // 입자 하나의 크기 (pW + gap)
         const particleSize = pW + gap;
@@ -176,9 +176,9 @@
         mctx.textAlign = "center";
         mctx.textBaseline = "middle";
         
-        // 텍스트를 두껍게 만들기 위해 stroke + fill 조합
+        // 텍스트를 두껍게 만들기 위해 stroke + fill 조합 (굵기 조절 가능)
         mctx.strokeStyle = "white";
-        mctx.lineWidth = Math.max(1, fontSize / 30);
+        mctx.lineWidth = Math.max(1.5, fontSize / 25); // 이 값을 조절하면 굵기 변경
         mctx.strokeText(time, textWidth / 2, textHeight / 2);
         
         mctx.fillStyle = "white";
