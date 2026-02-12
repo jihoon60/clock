@@ -11,29 +11,52 @@
         body { 
             background-color: #000; 
             margin: 0; 
-            overflow: hidden; 
+            overflow-y: auto;
+            overflow-x: hidden;
+            min-height: 200vh; /* 페이지 높이를 2배로 늘려서 스크롤 가능하게 */
+            touch-action: pan-y;
+            cursor: none;
+            position: relative;
+        }
+        #canvas-container {
+            position: fixed; /* 스크롤해도 화면 중앙에 고정 */
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none; /* 캔버스 컨테이너는 클릭 방지 */
+            z-index: 1;
+        }
+        canvas { 
+            filter: drop-shadow(0 0 10px rgba(255, 0, 0, 0.7)); 
+            pointer-events: auto; /* 캔버스만 클릭 가능 */
+        }
+        #fs-btn {
+            position: fixed; 
+            right: 20px; 
+            bottom: 20px;
+            width: 40px; 
+            height: 40px;
+            background: rgba(255, 0, 0, 0.2);
+            border: 1px solid #FF0000; 
+            border-radius: 5px;
+            cursor: pointer; 
+            z-index: 100;
             display: flex; 
             justify-content: center; 
-            align-items: center; 
-            height: 100vh;
-            touch-action: none;
-            cursor: none;
-        }
-        canvas { filter: drop-shadow(0 0 10px rgba(255, 0, 0, 0.7)); }
-        #fs-btn {
-            position: fixed; right: 20px; bottom: 20px;
-            width: 40px; height: 40px;
-            background: rgba(255, 0, 0, 0.2);
-            border: 1px solid #FF0000; border-radius: 5px;
-            cursor: pointer; z-index: 100;
-            display: flex; justify-content: center; align-items: center;
+            align-items: center;
             pointer-events: auto;
         }
         #fs-btn svg { fill: #FF0000; width: 24px; height: 24px; }
     </style>
 </head>
 <body>
-<canvas id="c"></canvas>
+<div id="canvas-container">
+    <canvas id="c"></canvas>
+</div>
 <div id="fs-btn">
     <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
 </div>
