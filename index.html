@@ -8,6 +8,15 @@
     <meta name="mobile-web-app-capable" content="yes">
     <title>Coke Magnetic Pixel Clock</title>
     <style>
+        /* HTML과 BODY 모두 스크롤바 숨기기 강제 적용 */
+        html, body {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        html::-webkit-scrollbar, body::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+
         body { 
             background-color: #000; 
             margin: 0; 
@@ -18,6 +27,7 @@
             cursor: none;
             position: relative;
         }
+
         #canvas-container {
             position: fixed; /* 스크롤해도 화면 중앙에 고정 */
             top: 0;
@@ -95,7 +105,6 @@
                 
                 // iOS 홈 화면에 추가 안내 (처음 클릭시에만)
                 if (/iPhone|iPad|iPod/i.test(navigator.userAgent) && !window.navigator.standalone) {
-                    // iOS에서는 "홈 화면에 추가"를 해야 진짜 전체화면
                     console.log('iOS: 홈 화면에 추가하면 전체화면으로 사용 가능');
                 }
                 isFullscreenMode = true;
@@ -130,7 +139,6 @@
     });
 
     function setPos(e) {
-        // 터치 전용 기기에서는 마우스 위치를 업데이트하지 않음
         if (isTouchOnly) return;
         
         mouseX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -222,50 +230,36 @@
         const mCanvas = document.createElement('canvas');
         const mctx = mCanvas.getContext('2d');
         
-        // 목표: 화면에 표시될 최종 크기를 먼저 결정
         const isLandscape = window.innerWidth > window.innerHeight;
         const targetDisplayWidth = isLandscape ? canvas.width * 0.8 : canvas.width * 0.95;
         const targetDisplayHeight = isLandscape ? canvas.height * 0.6 : canvas.height * 0.35;
         
-        // 입자 하나의 크기 (pW + gap)
         const particleSize = pW + gap;
-        
-        // 필요한 입자 개수 (가로 방향 기준으로 계산)
         const particlesWide = Math.floor(targetDisplayWidth / particleSize);
-        
-        // 텍스트를 렌더링할 캔버스 크기 = 입자 개수와 동일하게
         const textWidth = particlesWide;
         const textHeight = Math.floor(targetDisplayHeight / particleSize);
         
         mCanvas.width = textWidth;
         mCanvas.height = textHeight;
         
-        // 폰트 크기는 캔버스 너비에 맞춰 조정 (시간 텍스트 "00:00:00" 길이 고려)
         const fontSize = textWidth / 6;
-        
-        // 모바일에서도 두꺼운 폰트가 보이도록 폰트 스택 개선
         mctx.font = `900 ${fontSize}px Arial Black, Arial, sans-serif`;
         mctx.textAlign = "center";
         mctx.textBaseline = "middle";
-        
-        // 텍스트를 두껍게 만들기 위해 stroke + fill 조합 (굵기 조절 가능)
         mctx.strokeStyle = "white";
-        mctx.lineWidth = Math.max(1.5, fontSize / 25); // 이 값을 조절하면 굵기 변경
+        mctx.lineWidth = Math.max(1.5, fontSize / 25);
         mctx.strokeText(time, textWidth / 2, textHeight / 2);
-        
         mctx.fillStyle = "white";
         mctx.fillText(time, textWidth / 2, textHeight / 2);
 
         const data = mctx.getImageData(0, 0, textWidth, textHeight).data;
         
-        // 실제 화면에 표시될 크기 계산
         const displayWidth = textWidth * particleSize;
         const displayHeight = textHeight * particleSize;
         const startX = (canvas.width - displayWidth) / 2;
         const startY = (canvas.height - displayHeight) / 2;
 
         const newParticles = [];
-        // sampling = 1 (픽셀 1개당 입자 1개)
         for (let y = 0; y < textHeight; y++) {
             for (let x = 0; x < textWidth; x++) {
                 if (data[(y * textWidth + x) * 4 + 3] > 128) {
@@ -288,7 +282,6 @@
             p.draw(); 
         });
         
-        // 터치 전용 기기가 아닐 때만 마우스 포인터 표시
         if (!isTouchOnly) {
             ctx.strokeStyle = "#FF0000"; ctx.lineWidth = 2;
             ctx.beginPath(); ctx.arc(mouseX, mouseY, 16, 0, Math.PI * 2); ctx.stroke();
